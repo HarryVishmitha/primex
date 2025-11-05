@@ -8,7 +8,7 @@ use Illuminate\Database\Seeder;
 
 class TenantSeeder extends Seeder
 {
-    public static string $tenantId;
+    public static ?string $tenantId = null;
 
     public function run(): void
     {

@@ -34,10 +34,15 @@ class RolesAndPermissionsSeeder extends Seeder
             ]);
         }
 
+        $allPermissions = Permission::query()
+            ->where('guard_name', 'web')
+            ->pluck('name')
+            ->all();
+
         $tenantId = TenantSeeder::$tenantId;
 
         $roleDefinitions = [
-            'Owner' => $permissions,
+            'Owner' => $allPermissions,
             'Manager' => ['members.view', 'members.manage', 'subscriptions.manage', 'classes.manage', 'invoices.manage', 'payments.manage', 'reports.view'],
             'Trainer' => ['members.view', 'attendance.manage', 'classes.manage'],
             'Receptionist' => ['members.view', 'members.manage', 'payments.manage', 'pos.sell'],

@@ -9,9 +9,12 @@ use App\Events\SubscriptionActivated;
 use Carbon\CarbonInterval;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
 
 class Subscription extends TenantModel
 {
+    use LogsActivity;
     protected $with = ['member', 'plan'];
 
     protected $fillable = [
@@ -96,6 +99,16 @@ class Subscription extends TenantModel
         }
 
         return $this->starts_at->diffAsCarbonInterval($this->ends_at);
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['member_id', 'plan_id', 'status', 'starts_at', 'ends_at', 'auto_renew'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs()
+            ->setDescriptionForEvent(fn(string $eventName) => "Subscription {$eventName}")
+            ->useLogName('subscription');
     }
 }
 

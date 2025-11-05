@@ -7,9 +7,12 @@ namespace App\Models;
 use App\Casts\AsUlidString;
 use App\Events\ClassBooked;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
 
 class ClassBooking extends TenantModel
 {
+    use LogsActivity;
     protected $fillable = [
         'tenant_id',
         'schedule_id',
@@ -60,6 +63,16 @@ class ClassBooking extends TenantModel
     public function getStatusLabelAttribute(): string
     {
         return str_replace('_', ' ', ucfirst($this->status));
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['schedule_id', 'member_id', 'status'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs()
+            ->setDescriptionForEvent(fn(string $eventName) => "Class booking {$eventName}")
+            ->useLogName('class_booking');
     }
 }
 

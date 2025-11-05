@@ -18,13 +18,21 @@ class SetPermissionsTeam
 
     public function handle(Request $request, Closure $next): Response
     {
+        $teamId = null;
+
         if (app()->bound('tenancy') && tenancy()->initialized) {
-            $this->registrar->setPermissionsTeamId(tenant()->getTenantKey());
-        } else {
-            $this->registrar->setPermissionsTeamId(null);
+            $teamId = tenant()->getTenantKey();
+        } elseif ($request->user()) {
+            $teamId = $request->user()->tenant_id;
+        }
+
+        $currentTeamId = $this->registrar->getPermissionsTeamId();
+
+        if ($currentTeamId !== $teamId) {
+            $this->registrar->setPermissionsTeamId($teamId);
+            $this->registrar->forgetCachedPermissions();
         }
 
         return $next($request);
     }
 }
-

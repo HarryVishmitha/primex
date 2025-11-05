@@ -10,10 +10,13 @@ use App\Scopes\BranchScope;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
 
 class Member extends TenantModel
 {
     use SoftDeletes;
+    use LogsActivity;
 
     protected $with = ['branch'];
 
@@ -95,5 +98,15 @@ class Member extends TenantModel
             'suspended' => 'Suspended',
             default => 'Prospect',
         };
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['full_name', 'email', 'phone', 'status', 'branch_id'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs()
+            ->setDescriptionForEvent(fn(string $eventName) => "Member {$eventName}")
+            ->useLogName('member');
     }
 }

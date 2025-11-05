@@ -10,10 +10,13 @@ use App\Events\PaymentSucceeded;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
 
 class Payment extends TenantModel
 {
     use SoftDeletes;
+    use LogsActivity;
 
     protected $with = ['invoice'];
 
@@ -92,5 +95,15 @@ class Payment extends TenantModel
     public function getAmountFormattedAttribute(): string
     {
         return $this->amount_cents?->format() ?? 'LKR 0.00';
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['member_id', 'invoice_id', 'subscription_id', 'method', 'amount_cents', 'status', 'paid_at'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs()
+            ->setDescriptionForEvent(fn(string $eventName) => "Payment {$eventName}")
+            ->useLogName('payment');
     }
 }

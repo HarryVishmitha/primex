@@ -7,9 +7,12 @@ namespace App\Models;
 use App\Casts\AsUlidString;
 use App\Scopes\BranchScope;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
 
 class AttendanceLog extends TenantModel
 {
+    use LogsActivity;
     protected $fillable = [
         'tenant_id',
         'member_id',
@@ -58,6 +61,16 @@ class AttendanceLog extends TenantModel
     public function scopeBetween($query, $from, $to)
     {
         return $query->whereBetween('checked_in_at', [$from, $to]);
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['member_id', 'branch_id', 'checked_in_at', 'checked_out_at', 'source'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs()
+            ->setDescriptionForEvent(fn(string $eventName) => "Attendance {$eventName}")
+            ->useLogName('attendance');
     }
 }
 

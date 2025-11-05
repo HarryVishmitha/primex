@@ -2,11 +2,13 @@
 
 namespace App\Providers;
 
+use App\Models\Activity;
 use App\Models\AttendanceLog;
 use App\Models\Invoice;
 use App\Models\Member;
 use App\Models\Payment;
 use App\Models\Subscription;
+use App\Policies\ActivityPolicy;
 use App\Policies\AttendanceLogPolicy;
 use App\Policies\InvoicePolicy;
 use App\Policies\MemberPolicy;
@@ -28,6 +30,7 @@ class AuthServiceProvider extends ServiceProvider
         AttendanceLog::class => AttendanceLogPolicy::class,
         Payment::class => PaymentPolicy::class,
         Invoice::class => InvoicePolicy::class,
+        Activity::class => ActivityPolicy::class,
     ];
 
     /**

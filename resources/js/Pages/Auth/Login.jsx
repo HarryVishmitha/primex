@@ -4,14 +4,23 @@ import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import GuestLayout from '@/Layouts/GuestLayout';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { useEffect } from 'react';
 
 export default function Login({ status, canResetPassword }) {
+    const { csrf_token: csrfToken = '' } = usePage().props;
     const { data, setData, post, processing, errors, reset } = useForm({
         email: '',
         password: '',
         remember: false,
+        _token: csrfToken,
     });
+
+    useEffect(() => {
+        if (csrfToken && csrfToken !== data._token) {
+            setData('_token', csrfToken);
+        }
+    }, [csrfToken, data._token, setData]);
 
     const submit = (e) => {
         e.preventDefault();
@@ -32,6 +41,7 @@ export default function Login({ status, canResetPassword }) {
             )}
 
             <form onSubmit={submit}>
+                <input type="hidden" name="_token" value={data._token} />
                 <div>
                     <InputLabel htmlFor="email" value="Email" />
 

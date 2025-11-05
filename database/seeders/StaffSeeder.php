@@ -2,10 +2,12 @@
 
 namespace Database\Seeders;
 
-use App\Models\Branch;
 use App\Models\User;
+use App\Models\Tenant;
+use App\Models\Branch;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\PermissionRegistrar;
+use Illuminate\Support\Facades\Hash;
 
 class StaffSeeder extends Seeder
 {
@@ -15,6 +17,15 @@ class StaffSeeder extends Seeder
     public function run(): void
     {
         $tenantId = TenantSeeder::$tenantId;
+        if (! $tenantId) {
+            $tenantId = Tenant::query()->value('id');
+
+            if (! $tenantId) {
+                throw new \RuntimeException('Tenant not seeded. Run TenantSeeder before StaffSeeder.');
+            }
+
+            TenantSeeder::$tenantId = $tenantId;
+        }
         $branches = BranchSeeder::$branchIds;
 
         /** @var PermissionRegistrar $registrar */
@@ -26,6 +37,7 @@ class StaffSeeder extends Seeder
             'branch_id' => $branches[0] ?? null,
             'name' => 'Primex Owner',
             'email' => 'owner@primex.test',
+            'password' => Hash::make('password'),
         ]);
         $owner->assignRole('Owner');
         self::$staffIds['owner'] = $owner->id;
@@ -35,6 +47,7 @@ class StaffSeeder extends Seeder
             'branch_id' => $branches[0] ?? null,
             'name' => 'Primex Manager',
             'email' => 'manager@primex.test',
+            'password' => Hash::make('password'),
         ]);
         $manager->assignRole('Manager');
         self::$staffIds['manager'] = $manager->id;
@@ -44,6 +57,7 @@ class StaffSeeder extends Seeder
             'branch_id' => $branches[1] ?? $branches[0] ?? null,
             'name' => 'Primex Trainer',
             'email' => 'trainer@primex.test',
+            'password' => Hash::make('password'),
         ]);
         $trainer->assignRole('Trainer');
         self::$staffIds['trainer'] = $trainer->id;
@@ -53,6 +67,7 @@ class StaffSeeder extends Seeder
             'branch_id' => $branches[1] ?? $branches[0] ?? null,
             'name' => 'Primex Reception',
             'email' => 'frontdesk@primex.test',
+            'password' => Hash::make('password'),
         ]);
         $receptionist->assignRole('Receptionist');
         self::$staffIds['receptionist'] = $receptionist->id;

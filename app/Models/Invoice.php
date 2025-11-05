@@ -9,10 +9,13 @@ use App\Casts\MoneyCast;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
 
 class Invoice extends TenantModel
 {
     use SoftDeletes;
+    use LogsActivity;
 
     protected $with = ['member', 'items'];
 
@@ -80,5 +83,15 @@ class Invoice extends TenantModel
     public function getStatusLabelAttribute(): string
     {
         return ucfirst($this->status);
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['member_id', 'number', 'status', 'total_cents', 'issued_at', 'due_at'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs()
+            ->setDescriptionForEvent(fn(string $eventName) => "Invoice {$eventName}")
+            ->useLogName('invoice');
     }
 }
