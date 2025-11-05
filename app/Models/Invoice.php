@@ -8,9 +8,12 @@ use App\Casts\AsUlidString;
 use App\Casts\MoneyCast;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Invoice extends TenantModel
 {
+    use SoftDeletes;
+
     protected $with = ['member', 'items'];
 
     protected $fillable = [
@@ -36,6 +39,7 @@ class Invoice extends TenantModel
         'total_cents' => MoneyCast::class,
         'issued_at' => 'datetime',
         'due_at' => 'datetime',
+        'deleted_at' => 'datetime',
     ];
 
     protected $appends = [
@@ -78,4 +82,3 @@ class Invoice extends TenantModel
         return ucfirst($this->status);
     }
 }
-

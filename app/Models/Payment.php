@@ -9,9 +9,12 @@ use App\Casts\MoneyCast;
 use App\Events\PaymentSucceeded;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Payment extends TenantModel
 {
+    use SoftDeletes;
+
     protected $with = ['invoice'];
 
     protected $fillable = [
@@ -33,6 +36,7 @@ class Payment extends TenantModel
         'member_id' => AsUlidString::class,
         'amount_cents' => MoneyCast::class,
         'paid_at' => 'datetime',
+        'deleted_at' => 'datetime',
     ];
 
     protected $appends = [
@@ -90,4 +94,3 @@ class Payment extends TenantModel
         return $this->amount_cents?->format() ?? 'LKR 0.00';
     }
 }
-

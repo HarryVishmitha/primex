@@ -7,9 +7,12 @@ namespace App\Models;
 use App\Casts\AsUlidString;
 use App\Casts\MoneyCast;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class InvoiceItem extends TenantModel
 {
+    use SoftDeletes;
+
     protected $fillable = [
         'tenant_id',
         'invoice_id',
@@ -28,6 +31,7 @@ class InvoiceItem extends TenantModel
         'ref_id' => AsUlidString::class,
         'unit_price_cents' => MoneyCast::class,
         'line_total_cents' => MoneyCast::class,
+        'deleted_at' => 'datetime',
     ];
 
     protected $appends = [
@@ -44,4 +48,3 @@ class InvoiceItem extends TenantModel
         return $this->line_total_cents?->format() ?? 'LKR 0.00';
     }
 }
-
