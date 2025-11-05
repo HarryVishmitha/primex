@@ -37,6 +37,7 @@ class ClassSeeder extends Seeder
                     'tenant_id' => $tenantId,
                     'class_id' => $fitnessClass->id,
                     'trainer_id' => $trainerId,
+                    'recurrence' => null,
                 ]);
             }
         }

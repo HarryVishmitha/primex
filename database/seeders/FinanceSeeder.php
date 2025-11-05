@@ -8,6 +8,7 @@ use App\Models\Payment;
 use App\Models\Plan;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Arr;
 
 class FinanceSeeder extends Seeder
 {
@@ -23,15 +24,17 @@ class FinanceSeeder extends Seeder
             }
 
             $plan = $plans->random();
-            $planAmount = (int) $plan->getAttributes()['price_cents'];
+            $planAmount = (int) Arr::get($plan->getAttributes(), 'price_cents', 0);
+            $qty = 1;
             $tax = (int) round($planAmount * 0.08);
-            $total = $planAmount + $tax;
+            $lineTotal = $qty * $planAmount;
+            $total = $lineTotal + $tax;
 
             $invoice = Invoice::factory()->create([
                 'tenant_id' => $tenantId,
                 'member_id' => $memberId,
                 'status' => 'paid',
-                'subtotal_cents' => $planAmount,
+                'subtotal_cents' => $lineTotal,
                 'discount_cents' => 0,
                 'tax_cents' => $tax,
                 'total_cents' => $total,
@@ -39,11 +42,15 @@ class FinanceSeeder extends Seeder
                 'due_at' => Carbon::now()->addDays(7),
             ]);
 
-            InvoiceItem::factory()->forPlan($plan)->create([
+            InvoiceItem::query()->create([
                 'tenant_id' => $tenantId,
                 'invoice_id' => $invoice->id,
+                'item_type' => 'plan',
+                'ref_id' => $plan->id,
+                'name' => $plan->name,
+                'qty' => $qty,
                 'unit_price_cents' => $planAmount,
-                'qty' => 1,
+                'line_total_cents' => $lineTotal,
             ]);
 
             Payment::factory()->create([
