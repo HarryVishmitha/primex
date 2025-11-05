@@ -39,11 +39,9 @@ class FinanceSeeder extends Seeder
                 'due_at' => Carbon::now()->addDays(7),
             ]);
 
-            InvoiceItem::factory()->create([
+            InvoiceItem::factory()->forPlan($plan)->create([
                 'tenant_id' => $tenantId,
                 'invoice_id' => $invoice->id,
-                'item_type' => 'plan',
-                'name' => $plan->name,
                 'unit_price_cents' => $planAmount,
                 'qty' => 1,
             ]);

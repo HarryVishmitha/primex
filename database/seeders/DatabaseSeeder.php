@@ -2,9 +2,10 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Database\Seeders\Patches\FixInvoiceMath;
+use Database\Seeders\Patches\FixJsonNulls;
 
 class DatabaseSeeder extends Seeder
 {
@@ -27,6 +28,8 @@ class DatabaseSeeder extends Seeder
             ClassSeeder::class,
             FinanceSeeder::class,
             CommunicationSeeder::class,
+            FixInvoiceMath::class,
+            FixJsonNulls::class,
         ]);
     }
 }

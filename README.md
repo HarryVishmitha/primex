@@ -32,6 +32,7 @@ Factories generate realistic data for every module. The seeders run in the requi
 8. `ClassSeeder` → build class categories, classes, and schedules with trainers.
 9. `FinanceSeeder` → issue invoices, auto-compute items, and record succeeded payments.
 10. `CommunicationSeeder` → publish announcements and default settings records.
+11. Patch seeders: `FixInvoiceMath` and `FixJsonNulls` reconcile totals and JSON payloads after the feature seeders run.
 
 ## Local Setup
 
@@ -54,3 +55,37 @@ npm run dev
 - Domain events (`SubscriptionActivated`, `PaymentSucceeded`, `ClassBooked`) are dispatched for downstream workflows (notifications, automation, etc.).
 
 The codebase is now ready for application services, UI flows, and integration tests on top of a production-grade schema.
+
+## Phase 2 Schema Alignments
+
+- Activity log, media library, Sanctum tokens, domains, settings, and ticket messages now store ULID foreign keys as `CHAR(26)` to stay aligned with tenant/member identifiers.
+- Integrity checks guard invoice, invoice item, and payment monetary columns against negative values or zero quantities.
+- Hot-path indexes cover subscriptions, attendance logs, payments, invoices, class bookings, and product SKUs. Existing anonymous SKU unique keys are re-created as `prod_tenant_sku_unique`.
+- Migration `2025_11_05_100300_normalize_tenant_branch_fk` intentionally omits a `down()` body to avoid lossy reversals when re-lengthening columns.
+
+## Domain Guards & Services
+
+- `ActivateSubscription` enforces a single active subscription per member using row-level locking.
+- `CheckInMember` prevents concurrent attendance sessions per member/tenant.
+- `BookClass` blocks over-capacity reservations by counting `reserved` + `checked_in` bookings in a serialized transaction.
+- Invoice item observers now account for line discounts (defaulting to zero) and clamp totals to non-negative values.
+
+## Quality Gates
+
+- Feature coverage is provided by Pest tests under `tests/Feature/*`:
+  - Finance: invoice math reconciliation & tenant-scoped numbering.
+  - Subscriptions: activation guard.
+  - Attendance: double check-in prevention.
+  - Classes: capacity enforcement.
+  - Tenancy: tenant and branch scope isolation.
+- Static analysis uses Larastan at max level (`phpstan.neon.dist`) and Laravel Pint (`vendor/bin/pint`).
+- Run all checks with `composer run qa`, which executes database refresh + seeds, feature tests, Pint (dry-run), and PHPStan analysis.
+
+## Operational Runbook
+
+1. `php artisan migrate` (or `php artisan migrate:fresh --seed` for a rebuild).
+2. `php artisan db:seed` (already calls the patch seeders listed above).
+3. `php artisan test` (or `composer run qa` for the full gate).
+4. `php artisan permission:cache-reset` whenever roles/permissions/teams are updated.
+
+These steps keep schema, seed data, caches, and quality gates aligned for every deployment cycle.

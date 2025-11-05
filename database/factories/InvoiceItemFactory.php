@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\InvoiceItem;
+use App\Models\Plan;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
@@ -29,5 +30,23 @@ class InvoiceItemFactory extends Factory
             'unit_price_cents' => $unit,
             'line_total_cents' => $qty * $unit,
         ];
+    }
+
+    public function forPlan(Plan $plan): static
+    {
+        return $this->state(function (array $attributes) use ($plan) {
+            $qty = $attributes['qty'] ?? 1;
+            $unit = (int) data_get($plan->getAttributes(), 'price_cents', 0);
+
+            return [
+                'tenant_id' => $plan->tenant_id,
+                'item_type' => 'plan',
+                'ref_id' => $plan->id,
+                'name' => $plan->name,
+                'qty' => $qty,
+                'unit_price_cents' => $unit,
+                'line_total_cents' => $qty * $unit,
+            ];
+        });
     }
 }

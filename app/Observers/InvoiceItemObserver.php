@@ -20,7 +20,10 @@ class InvoiceItemObserver
 
     private function syncLineTotal(InvoiceItem $item): void
     {
-        $item->line_total_cents = $item->qty * $item->unit_price_cents;
+        $discount = (int) ($item->getAttribute('line_discount_cents') ?? 0);
+        $item->line_total_cents = max(
+            0,
+            ($item->qty * $item->unit_price_cents) - $discount
+        );
     }
 }
-
