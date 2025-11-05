@@ -161,7 +161,7 @@ export default function Dashboard({ stats, charts, recentActivities, upcomingCla
                     {/* Stats Grid */}
                     <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-6">
                         {/* Members Card */}
-                        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow-lg rounded-lg hover:shadow-xl transition-shadow duration-300">
+                        <div className="bg-white dark:bg-gray-900 overflow-hidden shadow-lg rounded-lg hover:shadow-xl transition-shadow duration-300">
                             <div className="p-5">
                                 <div className="flex items-center justify-between">
                                     <div className="flex-shrink-0">
@@ -180,7 +180,7 @@ export default function Dashboard({ stats, charts, recentActivities, upcomingCla
                         </div>
 
                         {/* Subscriptions Card */}
-                        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow-lg rounded-lg hover:shadow-xl transition-shadow duration-300">
+                        <div className="bg-white dark:bg-gray-900 overflow-hidden shadow-lg rounded-lg hover:shadow-xl transition-shadow duration-300">
                             <div className="p-5">
                                 <div className="flex items-center justify-between">
                                     <div className="flex-shrink-0">
@@ -199,7 +199,7 @@ export default function Dashboard({ stats, charts, recentActivities, upcomingCla
                         </div>
 
                         {/* Check-ins Card */}
-                        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow-lg rounded-lg hover:shadow-xl transition-shadow duration-300">
+                        <div className="bg-white dark:bg-gray-900 overflow-hidden shadow-lg rounded-lg hover:shadow-xl transition-shadow duration-300">
                             <div className="p-5">
                                 <div className="flex items-center justify-between">
                                     <div className="flex-shrink-0">
@@ -218,7 +218,7 @@ export default function Dashboard({ stats, charts, recentActivities, upcomingCla
                         </div>
 
                         {/* Revenue Card */}
-                        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow-lg rounded-lg hover:shadow-xl transition-shadow duration-300">
+                        <div className="bg-white dark:bg-gray-900 overflow-hidden shadow-lg rounded-lg hover:shadow-xl transition-shadow duration-300">
                             <div className="p-5">
                                 <div className="flex items-center justify-between">
                                     <div className="flex-shrink-0">
@@ -240,7 +240,7 @@ export default function Dashboard({ stats, charts, recentActivities, upcomingCla
                     {/* Charts Row */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                         {/* Revenue Chart */}
-                        <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-6">
+                        <div className="bg-white dark:bg-gray-900 shadow-lg rounded-lg p-6">
                             <div className="flex items-center justify-between mb-4">
                                 <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Revenue Trend (Last 7 Days)</h3>
                                 <Icon icon="mdi:chart-line" className="h-6 w-6 text-blue-600 dark:text-blue-400" />
@@ -251,7 +251,7 @@ export default function Dashboard({ stats, charts, recentActivities, upcomingCla
                         </div>
 
                         {/* Member Growth Chart */}
-                        <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-6">
+                        <div className="bg-white dark:bg-gray-900 shadow-lg rounded-lg p-6">
                             <div className="flex items-center justify-between mb-4">
                                 <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Member Growth (Last 6 Months)</h3>
                                 <Icon icon="mdi:chart-bar" className="h-6 w-6 text-green-600 dark:text-green-400" />
@@ -265,7 +265,7 @@ export default function Dashboard({ stats, charts, recentActivities, upcomingCla
                     {/* Bottom Row - 3 Columns */}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         {/* Recent Activities */}
-                        <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg overflow-hidden">
+                        <div className="bg-white dark:bg-gray-900 shadow-lg rounded-lg overflow-hidden">
                             <div className="p-6 border-b border-gray-200 dark:border-gray-700">
                                 <div className="flex items-center justify-between">
                                     <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Recent Check-ins</h3>
@@ -305,7 +305,7 @@ export default function Dashboard({ stats, charts, recentActivities, upcomingCla
                         </div>
 
                         {/* Upcoming Classes */}
-                        <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg overflow-hidden">
+                        <div className="bg-white dark:bg-gray-900 shadow-lg rounded-lg overflow-hidden">
                             <div className="p-6 border-b border-gray-200 dark:border-gray-700">
                                 <div className="flex items-center justify-between">
                                     <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Upcoming Classes</h3>
@@ -348,7 +348,7 @@ export default function Dashboard({ stats, charts, recentActivities, upcomingCla
                         </div>
 
                         {/* Top Members or Pending Invoices */}
-                        <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg overflow-hidden">
+                        <div className="bg-white dark:bg-gray-900 shadow-lg rounded-lg overflow-hidden">
                             <div className="p-6 border-b border-gray-200 dark:border-gray-700">
                                 <div className="flex items-center justify-between">
                                     <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">

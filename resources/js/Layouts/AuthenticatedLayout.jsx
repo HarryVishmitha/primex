@@ -66,7 +66,7 @@ export default function AuthenticatedLayout({ header, children }) {
     }, [can, roles, isOwner]);
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <div className="min-h-screen bg-gray-200/60 dark:bg-gray-900/95">
             {/* Mobile sidebar backdrop */}
             {sidebarOpen && (
                 <div

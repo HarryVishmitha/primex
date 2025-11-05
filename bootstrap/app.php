@@ -19,22 +19,28 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(
-            prepend: [
-                \App\Http\Middleware\SetPermissionsTeam::class,
-            ],
             append: [
+                \App\Http\Middleware\SetPermissionsTeam::class,
                 \App\Http\Middleware\HandleInertiaRequests::class,
                 \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
             ]
         );
 
-        $middleware->api(prepend: [
-            EnsureFrontendRequestsAreStateful::class,
-        ]);
+        $middleware->api(
+            prepend: [
+                EnsureFrontendRequestsAreStateful::class,
+            ],
+            append: [
+                \App\Http\Middleware\SetPermissionsTeam::class,
+            ]
+        );
 
         $middleware->alias([
             'auth' => \Illuminate\Auth\Middleware\Authenticate::class,
             'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
+            'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
+            'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
+            'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
         ]);
         //
     })

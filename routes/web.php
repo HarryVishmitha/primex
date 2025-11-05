@@ -3,6 +3,7 @@
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use App\Http\Controllers\MemberWebController;
 
 Route::redirect('/', '/login');
 
@@ -17,10 +18,8 @@ Route::middleware('auth')->group(function () {
 
     // Member routes
     Route::prefix('members')->name('members.')->group(function () {
-        Route::get('/', fn() => Inertia::render('Members/Index'))->name('index');
-        Route::get('/create', fn() => Inertia::render('Members/Create'))->name('create');
-        Route::get('/{member}', fn() => Inertia::render('Members/Show'))->name('show');
-        Route::get('/{member}/edit', fn() => Inertia::render('Members/Edit'))->name('edit');
+        Route::get('/', [App\Http\Controllers\MemberWebController::class, 'index'])->name('index');
+        Route::get('/{member}', [App\Http\Controllers\MemberWebController::class, 'show'])->name('show');
     });
 
     // Subscription routes
@@ -69,6 +68,43 @@ Route::middleware('auth')->group(function () {
     Route::prefix('activity-logs')->name('activity-logs.')->group(function () {
         Route::get('/', [App\Http\Controllers\ActivityLogController::class, 'index'])->name('index');
         Route::get('/{activity}', [App\Http\Controllers\ActivityLogController::class, 'show'])->name('show');
+    });
+
+    // Web API Routes (for Inertia/AJAX calls with session auth)
+    Route::prefix('web/api')->name('web.api.')->group(function () {
+        Route::prefix('admin/members')->name('admin.members.')->group(function () {
+            Route::get('/', [MemberWebController::class, 'index'])
+                ->middleware('permission:members.view')
+                ->name('index');
+
+            Route::post('/', [MemberWebController::class, 'store'])
+                ->middleware('permission:members.manage')
+                ->name('store');
+
+            Route::get('/{member}', [MemberWebController::class, 'show'])
+                ->middleware('permission:members.view')
+                ->name('show');
+
+            Route::put('/{member}', [MemberWebController::class, 'update'])
+                ->middleware('permission:members.manage')
+                ->name('update');
+
+            Route::delete('/{member}', [MemberWebController::class, 'destroy'])
+                ->middleware('permission:members.manage')
+                ->name('destroy');
+
+            Route::post('/{member}/restore', [MemberWebController::class, 'restore'])
+                ->middleware('permission:members.manage')
+                ->name('restore');
+
+            Route::post('/{member}/photo', [MemberWebController::class, 'uploadPhoto'])
+                ->middleware('permission:members.manage')
+                ->name('photo');
+
+            Route::post('/{member}/status', [MemberWebController::class, 'updateStatus'])
+                ->middleware('permission:members.manage')
+                ->name('status');
+        });
     });
 });
 

@@ -8,20 +8,9 @@ export const navigationConfig = [
     },
     {
         name: 'Members',
+        href: 'members.index',
         icon: 'UsersIcon',
         permission: 'members.view',
-        children: [
-            {
-                name: 'All Members',
-                href: 'members.index',
-                permission: 'members.view',
-            },
-            {
-                name: 'Add Member',
-                href: 'members.create',
-                permission: 'members.manage',
-            },
-        ],
     },
     {
         name: 'Subscriptions',
