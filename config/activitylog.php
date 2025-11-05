@@ -17,7 +17,7 @@ return [
      * If no log name is passed to the activity() helper
      * we use this default log name.
      */
-    'default_log_name' => 'default',
+    'default_log_name' => env('ACTIVITY_LOGGER_DEFAULT_LOG', 'system'),
 
     /*
      * You can specify an auth driver here that gets user models.
@@ -35,7 +35,7 @@ return [
      * It should implement the Spatie\Activitylog\Contracts\Activity interface
      * and extend Illuminate\Database\Eloquent\Model.
      */
-    'activity_model' => \Spatie\Activitylog\Models\Activity::class,
+    'activity_model' => \App\Models\Activity::class,
 
     /*
      * This is the name of the table that will be created by the migration and

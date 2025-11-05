@@ -36,9 +36,9 @@ return [
     'repositories' => [
         'database' => [
             'type' => Spatie\LaravelSettings\SettingsRepositories\DatabaseSettingsRepository::class,
-            'model' => null,
-            'table' => null,
-            'connection' => null,
+            'model' => App\Models\SettingsProperty::class,
+            'table' => 'settings',
+            'connection' => env('DB_CONNECTION'),
         ],
         'redis' => [
             'type' => Spatie\LaravelSettings\SettingsRepositories\RedisSettingsRepository::class,

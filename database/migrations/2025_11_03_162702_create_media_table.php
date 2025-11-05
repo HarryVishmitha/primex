@@ -13,6 +13,7 @@ return new class extends Migration
 
             $table->morphs('model');
             $table->uuid()->nullable()->unique();
+            $table->string('tenant_id')->default('central')->index();
             $table->string('collection_name');
             $table->string('name');
             $table->string('file_name');
@@ -28,5 +29,10 @@ return new class extends Migration
 
             $table->nullableTimestamps();
         });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('media');
     }
 };
