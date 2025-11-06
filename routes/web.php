@@ -73,37 +73,45 @@ Route::middleware('auth')->group(function () {
     // Web API Routes (for Inertia/AJAX calls with session auth)
     Route::prefix('web/api')->name('web.api.')->group(function () {
         Route::prefix('admin/members')->name('admin.members.')->group(function () {
-            Route::get('/', [MemberWebController::class, 'index'])
+            Route::get('/', [App\Http\Controllers\Admin\Members\MemberController::class, 'index'])
                 ->middleware('permission:members.view')
                 ->name('index');
 
-            Route::post('/', [MemberWebController::class, 'store'])
+            Route::post('/', [App\Http\Controllers\Admin\Members\MemberController::class, 'store'])
                 ->middleware('permission:members.manage')
                 ->name('store');
 
-            Route::get('/{member}', [MemberWebController::class, 'show'])
+            Route::get('/{member}', [App\Http\Controllers\Admin\Members\MemberController::class, 'show'])
                 ->middleware('permission:members.view')
                 ->name('show');
 
-            Route::put('/{member}', [MemberWebController::class, 'update'])
+            Route::put('/{member}', [App\Http\Controllers\Admin\Members\MemberController::class, 'update'])
                 ->middleware('permission:members.manage')
                 ->name('update');
 
-            Route::delete('/{member}', [MemberWebController::class, 'destroy'])
+            Route::delete('/{member}', [App\Http\Controllers\Admin\Members\MemberController::class, 'destroy'])
                 ->middleware('permission:members.manage')
                 ->name('destroy');
 
-            Route::post('/{member}/restore', [MemberWebController::class, 'restore'])
+            Route::post('/{member}/restore', [App\Http\Controllers\Admin\Members\MemberController::class, 'restore'])
                 ->middleware('permission:members.manage')
                 ->name('restore');
 
-            Route::post('/{member}/photo', [MemberWebController::class, 'uploadPhoto'])
+            Route::post('/{member}/photo', [App\Http\Controllers\Admin\Members\MemberController::class, 'uploadPhoto'])
                 ->middleware('permission:members.manage')
                 ->name('photo');
 
-            Route::post('/{member}/status', [MemberWebController::class, 'updateStatus'])
+            Route::post('/{member}/status', [App\Http\Controllers\Admin\Members\MemberController::class, 'updateStatus'])
                 ->middleware('permission:members.manage')
                 ->name('status');
+
+            Route::post('/{member}/renew', [App\Http\Controllers\Admin\Members\MemberController::class, 'renew'])
+                ->middleware('permission:members.manage')
+                ->name('renew');
+
+            Route::post('/{member}/message', [App\Http\Controllers\Admin\Members\MemberController::class, 'message'])
+                ->middleware('permission:members.manage')
+                ->name('message');
         });
     });
 });

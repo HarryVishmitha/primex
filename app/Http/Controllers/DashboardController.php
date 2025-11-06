@@ -205,7 +205,7 @@ class DashboardController extends Controller
                 'id' => $schedule->id,
                 'title' => $schedule->class->title,
                 'trainer' => $schedule->trainer->name,
-                'start_time' => $schedule->start_time->format('M d, g:i A'),
+                'start_time' => $schedule->starts_at->format('M d, g:i A'),
                 'capacity' => $schedule->capacity,
                 'booked' => ClassBooking::where('schedule_id', $schedule->id)
                     ->where('status', 'confirmed')

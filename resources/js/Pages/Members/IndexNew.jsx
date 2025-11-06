@@ -1,7 +1,8 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, router } from '@inertiajs/react';
 import { Icon } from '@iconify/react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
+import { Dialog, Transition } from '@headlessui/react';
 import { format } from 'date-fns';
 import DataTable from '@/Components/DataTable';
 import Badge from '@/Components/Badge';
@@ -28,7 +29,7 @@ const formatDate = (dateString) => {
     }
 };
 
-export default function MembersIndex({ auth, branches: initialBranches = [] }) {
+export default function MembersIndex({ auth, branches: initialBranches = [], users: initialUsers = [], plans: initialPlans = [] }) {
     const [members, setMembers] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -48,6 +49,22 @@ export default function MembersIndex({ auth, branches: initialBranches = [] }) {
     });
 
     const http = useMemo(() => window.axios, []);
+
+    // Server-side search term (debounced)
+    const [search, setSearch] = useState('');
+    useEffect(() => {
+        const id = setTimeout(() => {
+            updateFilter('q', search.trim() || undefined);
+        }, 400);
+        return () => clearTimeout(id);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [search]);
+
+    // Renew dialog state
+    const [renewOpen, setRenewOpen] = useState(false);
+    const [renewMember, setRenewMember] = useState(null);
+    const [renewPlanId, setRenewPlanId] = useState('');
+    const [renewAuto, setRenewAuto] = useState(false);
 
     const fetchMembers = useCallback(async () => {
         setLoading(true);
@@ -196,6 +213,47 @@ export default function MembersIndex({ auth, branches: initialBranches = [] }) {
         }
     };
 
+    const openRenew = (member) => {
+        const defaultPlan = member.latest_subscription?.plan?.id || initialPlans[0]?.id || '';
+        setRenewMember(member);
+        setRenewPlanId(defaultPlan);
+        setRenewAuto(!!member.latest_subscription?.auto_renew);
+        setRenewOpen(true);
+    };
+
+    const handleRenew = async (member) => {
+        setError(null);
+        setSuccess(null);
+        try {
+            const fallbackPlanId = (initialPlans && initialPlans.length > 0) ? initialPlans[0].id : undefined;
+            await http.post(`/web/api/admin/members/${member.id}/renew`, {
+                plan_id: renewPlanId || member.latest_subscription?.plan?.id || fallbackPlanId,
+                auto_renew: renewAuto ? 1 : 0,
+            });
+            setSuccess(`Renewed ${member.full_name}.`);
+            fetchMembers();
+            setRenewOpen(false);
+            setRenewMember(null);
+        } catch (err) {
+            setError(err.response?.data?.message ?? `Failed to renew ${member.full_name}.`);
+        }
+    };
+
+    const handleMessage = async (member) => {
+        const title = window.prompt('Message title');
+        if (!title) return;
+        const body = window.prompt('Message body');
+        if (!body) return;
+        setError(null);
+        setSuccess(null);
+        try {
+            await http.post(`/web/api/admin/members/${member.id}/message`, { title, body });
+            setSuccess(`Message sent to ${member.full_name}.`);
+        } catch (err) {
+            setError(err.response?.data?.message ?? `Failed to message ${member.full_name}.`);
+        }
+    };
+
     const columns = useMemo(
         () => [
             {
@@ -240,6 +298,15 @@ export default function MembersIndex({ auth, branches: initialBranches = [] }) {
                 cell: ({ row }) => (
                     <span className="text-sm text-gray-600 dark:text-gray-300">
                         {row.original.branch?.name || '—'}
+                    </span>
+                ),
+            },
+            {
+                id: 'plan',
+                header: 'Plan',
+                cell: ({ row }) => (
+                    <span className="text-sm text-gray-600 dark:text-gray-300">
+                        {row.original.latest_subscription?.plan?.name || '—'}
                     </span>
                 ),
             },
@@ -310,6 +377,51 @@ export default function MembersIndex({ auth, branches: initialBranches = [] }) {
                             title="View details"
                         >
                             <Icon icon="heroicons:eye" width="18" />
+                        </button>
+                        {row.original.status !== 'active' && (
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleStatusChange(row.original, 'active');
+                                }}
+                                className="rounded-md p-1.5 text-emerald-600 transition hover:bg-emerald-50 hover:text-emerald-700 dark:text-emerald-400 dark:hover:bg-emerald-900/30 dark:hover:text-emerald-300"
+                                title="Activate"
+                            >
+                                <Icon icon="heroicons:check-circle" width="18" />
+                            </button>
+                        )}
+                        {row.original.status !== 'suspended' && (
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleStatusChange(row.original, 'suspended');
+                                }}
+                                className="rounded-md p-1.5 text-amber-600 transition hover:bg-amber-50 hover:text-amber-700 dark:text-amber-400 dark:hover:bg-amber-900/30 dark:hover:text-amber-300"
+                                title="Suspend"
+                            >
+                                <Icon icon="heroicons:pause-circle" width="18" />
+                            </button>
+                        )}
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                openRenew(row.original);
+                            }}
+                            className="rounded-md p-1.5 text-blue-600 transition hover:bg-blue-50 hover:text-blue-700 dark:text-blue-400 dark:hover:bg-blue-900/30 dark:hover:text-blue-300"
+                            title="Renew"
+                            disabled={!initialPlans || initialPlans.length === 0}
+                        >
+                            <Icon icon="heroicons:arrow-path-rounded-square" width="18" />
+                        </button>
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleMessage(row.original);
+                            }}
+                            className="rounded-md p-1.5 text-purple-600 transition hover:bg-purple-50 hover:text-purple-700 dark:text-purple-400 dark:hover:bg-purple-900/30 dark:hover:text-purple-300"
+                            title="Message member"
+                        >
+                            <Icon icon="heroicons:envelope" width="18" />
                         </button>
                         <button
                             onClick={(e) => {
@@ -385,6 +497,27 @@ export default function MembersIndex({ auth, branches: initialBranches = [] }) {
             <Head title="Members" />
 
             <div className="space-y-6 p-4 sm:p-6 lg:p-8">
+                {/* Server-side Search */}
+                <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+                    <div className="flex items-center gap-3">
+                        <Icon icon="heroicons:magnifying-glass" width="18" className="text-gray-400" />
+                        <input
+                            type="text"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            placeholder="Search by code, name, email, or phone..."
+                            className="flex-1 rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                        />
+                        {search && (
+                            <button
+                                onClick={() => setSearch('')}
+                                className="rounded-md p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800"
+                            >
+                                <Icon icon="heroicons:x-mark" width="18" />
+                            </button>
+                        )}
+                    </div>
+                </div>
                 {/* Alert Messages */}
                 {(error || success) && (
                     <div
@@ -531,8 +664,7 @@ export default function MembersIndex({ auth, branches: initialBranches = [] }) {
                     columns={columns}
                     pageSize={15}
                     showPagination
-                    showSearch
-                    searchPlaceholder="Search by code, name, email, or phone..."
+                    showSearch={false}
                     emptyMessage="No members found. Try adjusting your filters or create a new member."
                     loading={loading}
                     onRowClick={(member) => router.visit(route('members.show', member.id))}
@@ -550,9 +682,84 @@ export default function MembersIndex({ auth, branches: initialBranches = [] }) {
                 onSubmit={handleSubmitDrawer}
                 member={editingMember}
                 branches={initialBranches}
+                users={initialUsers}
                 loading={drawerLoading}
                 errors={drawerErrors}
             />
+
+            {/* Renew Dialog */}
+            <Transition appear show={renewOpen} as={Fragment}>
+                <Dialog as="div" className="relative z-50" onClose={() => setRenewOpen(false)}>
+                    <Transition.Child
+                        as={Fragment}
+                        enter="ease-out duration-300"
+                        enterFrom="opacity-0"
+                        enterTo="opacity-100"
+                        leave="ease-in duration-200"
+                        leaveFrom="opacity-100"
+                        leaveTo="opacity-0"
+                    >
+                        <div className="fixed inset-0 bg-black/25 backdrop-blur-sm" />
+                    </Transition.Child>
+
+                    <div className="fixed inset-0 overflow-y-auto">
+                        <div className="flex min-h-full items-center justify-center p-4">
+                            <Transition.Child
+                                as={Fragment}
+                                enter="ease-out duration-300"
+                                enterFrom="opacity-0 scale-95"
+                                enterTo="opacity-100 scale-100"
+                                leave="ease-in duration-200"
+                                leaveFrom="opacity-100 scale-100"
+                                leaveTo="opacity-0 scale-95"
+                            >
+                                <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 shadow-xl transition-all dark:bg-gray-900">
+                                    <div className="flex items-center justify-between border-b border-gray-200 pb-3 dark:border-gray-800">
+                                        <Dialog.Title className="text-base font-semibold text-gray-900 dark:text-gray-100">
+                                            Renew Subscription
+                                        </Dialog.Title>
+                                        <button
+                                            onClick={() => setRenewOpen(false)}
+                                            className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800"
+                                        >
+                                            <Icon icon="heroicons:x-mark" width="20" />
+                                        </button>
+                                    </div>
+                                    <div className="mt-4 space-y-4">
+                                        <div>
+                                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Plan</label>
+                                            <select
+                                                className="mt-1 block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                                                value={renewPlanId}
+                                                onChange={(e) => setRenewPlanId(e.target.value)}
+                                            >
+                                                {initialPlans.map((p) => (
+                                                    <option key={p.id} value={p.id}>{p.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <label className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                                            <input
+                                                type="checkbox"
+                                                className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-700"
+                                                checked={renewAuto}
+                                                onChange={(e) => setRenewAuto(e.target.checked)}
+                                            />
+                                            Auto renew
+                                        </label>
+                                    </div>
+                                    <div className="mt-6 flex justify-end gap-3 border-t border-gray-200 pt-4 dark:border-gray-800">
+                                        <SecondaryButton type="button" onClick={() => setRenewOpen(false)}>Cancel</SecondaryButton>
+                                        <PrimaryButton type="button" onClick={() => renewMember && handleRenew(renewMember)} disabled={!renewPlanId}>
+                                            Confirm
+                                        </PrimaryButton>
+                                    </div>
+                                </Dialog.Panel>
+                            </Transition.Child>
+                        </div>
+                    </div>
+                </Dialog>
+            </Transition>
         </AuthenticatedLayout>
     );
 }

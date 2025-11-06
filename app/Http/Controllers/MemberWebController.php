@@ -18,6 +18,18 @@ class MemberWebController extends Controller
 
         $user = $request->user();
 
+        $users = \App\Models\User::query()
+            ->select(['id', 'name', 'email'])
+            ->where('tenant_id', $user?->tenant_id)
+            ->orderBy('name')
+            ->get();
+
+        $plans = \App\Models\Plan::query()
+            ->select(['id', 'name'])
+            ->where('tenant_id', $user?->tenant_id)
+            ->orderBy('name')
+            ->get();
+
         // Options/config the frontend needs for filters & UI state
         $options = [
             'statuses' => ['prospect', 'active', 'inactive', 'suspended'],
@@ -52,6 +64,8 @@ class MemberWebController extends Controller
 
         return Inertia::render('Members/IndexNew', [
             'branches' => $branches,
+            'users' => $users,
+            'plans' => $plans,
             'options' => $options,
             'can' => $can,
             'endpoints' => $endpoints,
@@ -60,8 +74,14 @@ class MemberWebController extends Controller
 
     public function show(string $memberId): Response
     {
+        $plans = \App\Models\Plan::query()
+            ->select(['id', 'name'])
+            ->orderBy('name')
+            ->get();
+
         return Inertia::render('Members/ShowNew', [
             'memberId' => $memberId,
+            'plans' => $plans,
         ]);
     }
 }

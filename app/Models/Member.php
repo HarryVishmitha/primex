@@ -9,14 +9,18 @@ use Illuminate\Database\Eloquent\Casts\AsArrayObject;
 use App\Scopes\BranchScope;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Activitylog\LogOptions;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
 
-class Member extends TenantModel
+class Member extends TenantModel implements HasMedia
 {
     use SoftDeletes;
     use LogsActivity;
+    use InteractsWithMedia;
 
     protected $with = ['branch'];
 
@@ -70,9 +74,24 @@ class Member extends TenantModel
         return $this->hasMany(Subscription::class);
     }
 
+    public function latestSubscription(): HasOne
+    {
+        return $this->hasOne(Subscription::class)->latestOfMany('ends_at');
+    }
+
     public function attendanceLogs(): HasMany
     {
         return $this->hasMany(AttendanceLog::class);
+    }
+
+    public function invoices(): HasMany
+    {
+        return $this->hasMany(Invoice::class);
+    }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class);
     }
 
     public function scopeActive($query)
@@ -98,6 +117,18 @@ class Member extends TenantModel
             'suspended' => 'Suspended',
             default => 'Prospect',
         };
+    }
+
+    public function scopeSearch($query, string $term)
+    {
+        $like = '%' . str_replace(['%', '_'], ['\%', '\_'], $term) . '%';
+
+        return $query->where(function ($q) use ($like) {
+            $q->where('code', 'like', $like)
+                ->orWhere('full_name', 'like', $like)
+                ->orWhere('email', 'like', $like)
+                ->orWhere('phone', 'like', $like);
+        });
     }
 
     public function getActivitylogOptions(): LogOptions

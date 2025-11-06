@@ -220,7 +220,7 @@ class MemberController extends Controller
                         'invoice_id' => $p->invoice_id ? (string) $p->invoice_id : null,
                         'status' => $p->status,
                         'method' => $p->method,
-                        'amount_cents' => (int) $p->amount_cents,
+                        'amount_cents' => $p->amount_cents?->toInteger() ?? 0,
                         'paid_at' => $p->paid_at?->toIso8601String(),
                     ];
                 })->all(),
@@ -229,7 +229,7 @@ class MemberController extends Controller
                         'id' => (string) $i->id,
                         'number' => $i->number,
                         'status' => $i->status,
-                        'total_cents' => (int) $i->total_cents,
+                        'total_cents' => $i->total_cents?->toInteger() ?? 0,
                         'issued_at' => $i->issued_at?->toIso8601String(),
                         'due_at' => $i->due_at?->toIso8601String(),
                     ];
@@ -331,6 +331,73 @@ class MemberController extends Controller
         ]);
 
         return MemberResource::make($memberModel);
+    }
+
+    public function renew(Request $request, string $member): MemberResource|JsonResponse
+    {
+        $memberModel = $this->findMemberOrFail($request, $member, includeTrashed: true);
+
+        $this->authorize('update', $memberModel);
+
+        $planId = $request->input('plan_id');
+        $autoRenew = (bool) $request->boolean('auto_renew');
+
+        $plan = null;
+        if ($planId) {
+            $plan = \App\Models\Plan::query()
+                ->where('tenant_id', $memberModel->tenant_id)
+                ->find($planId);
+        } elseif ($memberModel->latestSubscription?->plan) {
+            $plan = $memberModel->latestSubscription->plan;
+        }
+
+        if ($plan === null) {
+            return response()->json([
+                'message' => 'A plan is required to renew the subscription.',
+                'errors' => ['plan_id' => ['The plan field is required.']],
+            ], 422);
+        }
+
+        try {
+            $activate = app(\App\Domain\Subscriptions\ActivateSubscription::class);
+            $activate($memberModel, $plan, $autoRenew);
+        } catch (\DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        $memberModel->load([
+            'branch:id,name',
+            'latestSubscription.plan:id,name',
+        ]);
+
+        return MemberResource::make($memberModel);
+    }
+
+    public function message(Request $request, string $member): JsonResponse
+    {
+        $memberModel = $this->findMemberOrFail($request, $member, includeTrashed: true);
+
+        $this->authorize('update', $memberModel);
+
+        $validated = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'body' => ['required', 'string'],
+        ]);
+
+        if (! $memberModel->user_id) {
+            return response()->json([
+                'message' => 'This member is not linked to a user.',
+            ], 422);
+        }
+
+        \App\Models\Notification::create([
+            'tenant_id' => $memberModel->tenant_id,
+            'user_id' => $memberModel->user_id,
+            'title' => $validated['title'],
+            'body' => $validated['body'],
+        ]);
+
+        return response()->json(['message' => 'Message queued for delivery.']);
     }
 
     private function baseQuery(string $tenantId): Builder

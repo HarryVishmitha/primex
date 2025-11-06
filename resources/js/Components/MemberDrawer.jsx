@@ -13,6 +13,7 @@ const MemberDrawer = ({
     onSubmit,
     member = null,
     branches = [],
+    users = [],
     loading = false,
     errors = {},
 }) => {
@@ -24,6 +25,7 @@ const MemberDrawer = ({
         gender: '',
         dob: '',
         branch_id: '',
+        user_id: '',
         status: 'prospect',
         code: '',
         emergency_contact: {
@@ -42,6 +44,7 @@ const MemberDrawer = ({
                 gender: member.gender || '',
                 dob: member.dob || '',
                 branch_id: member.branch?.id || '',
+                user_id: member.user_id || '',
                 status: member.status || 'prospect',
                 code: member.code || '',
                 emergency_contact: member.emergency_contact || {
@@ -58,6 +61,7 @@ const MemberDrawer = ({
                 gender: '',
                 dob: '',
                 branch_id: branches[0]?.id || '',
+                user_id: '',
                 status: 'prospect',
                 code: '',
                 emergency_contact: {
@@ -226,6 +230,24 @@ const MemberDrawer = ({
                                                     ))}
                                                 </select>
                                                 <InputError message={errors.branch_id} className="mt-2" />
+                                            </div>
+
+                                            <div>
+                                                <InputLabel htmlFor="user_id" value="Linked User (Optional)" />
+                                                <select
+                                                    id="user_id"
+                                                    value={formData.user_id}
+                                                    onChange={(e) => handleChange('user_id', e.target.value)}
+                                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                                                >
+                                                    <option value="">— None —</option>
+                                                    {users.map((u) => (
+                                                        <option key={u.id} value={u.id}>
+                                                            {u.name} {u.email ? `(${u.email})` : ''}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                                <InputError message={errors.user_id} className="mt-2" />
                                             </div>
 
                                             <div>

@@ -1,52 +1,58 @@
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, router } from '@inertiajs/react';
-import { Icon } from '@iconify/react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { format } from 'date-fns';
-import Badge from '@/Components/Badge';
-import DataTable from '@/Components/DataTable';
-import PrimaryButton from '@/Components/PrimaryButton';
-import SecondaryButton from '@/Components/SecondaryButton';
+import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
+import { Head, router } from "@inertiajs/react";
+import { Icon } from "@iconify/react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { Dialog, Transition } from "@headlessui/react";
+import { format } from "date-fns";
+import Badge from "@/Components/Badge";
+import DataTable from "@/Components/DataTable";
+import PrimaryButton from "@/Components/PrimaryButton";
+import SecondaryButton from "@/Components/SecondaryButton";
 
 const TABS = [
-    { id: 'overview', label: 'Overview', icon: 'heroicons:squares-2x2' },
-    { id: 'subscriptions', label: 'Subscriptions', icon: 'heroicons:credit-card' },
-    { id: 'attendance', label: 'Attendance', icon: 'heroicons:calendar-days' },
-    { id: 'billing', label: 'Billing', icon: 'heroicons:banknotes' },
-    { id: 'notes', label: 'Notes', icon: 'heroicons:document-text' },
+    { id: "overview", label: "Overview", icon: "heroicons:squares-2x2" },
+    {
+        id: "subscriptions",
+        label: "Subscriptions",
+        icon: "heroicons:credit-card",
+    },
+    { id: "attendance", label: "Attendance", icon: "heroicons:calendar-days" },
+    { id: "billing", label: "Billing", icon: "heroicons:banknotes" },
+    { id: "notes", label: "Notes", icon: "heroicons:document-text" },
 ];
 
 const formatCurrency = (cents) => {
-    return new Intl.NumberFormat('en-LK', {
-        style: 'currency',
-        currency: 'LKR',
+    return new Intl.NumberFormat("en-LK", {
+        style: "currency",
+        currency: "LKR",
         minimumFractionDigits: 2,
     }).format((cents || 0) / 100);
 };
 
 const formatDate = (dateString) => {
-    if (!dateString) return '—';
+    if (!dateString) return "—";
     try {
-        return format(new Date(dateString), 'MMM dd, yyyy');
+        return format(new Date(dateString), "MMM dd, yyyy");
     } catch {
-        return '—';
+        return "—";
     }
 };
 
 const formatDateTime = (dateString) => {
-    if (!dateString) return '—';
+    if (!dateString) return "—";
     try {
-        return format(new Date(dateString), 'MMM dd, yyyy h:mm a');
+        return format(new Date(dateString), "MMM dd, yyyy h:mm a");
     } catch {
-        return '—';
+        return "—";
     }
 };
 
-export default function MemberShow({ memberId }) {
-    const [activeTab, setActiveTab] = useState('overview');
+export default function MemberShow({ memberId, plans: initialPlans = [] }) {
+    const [activeTab, setActiveTab] = useState("overview");
     const [member, setMember] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [success, setSuccess] = useState(null);
 
     const http = useMemo(() => window.axios, []);
 
@@ -55,12 +61,17 @@ export default function MemberShow({ memberId }) {
         setError(null);
 
         try {
-            const response = await http.get(`/web/api/admin/members/${memberId}`, {
-                params: { raw: 1 },
-            });
+            const response = await http.get(
+                `/web/api/admin/members/${memberId}`,
+                {
+                    params: { raw: 1 },
+                }
+            );
             setMember(response.data.data);
         } catch (err) {
-            setError(err.response?.data?.message ?? 'Unable to load member details.');
+            setError(
+                err.response?.data?.message ?? "Unable to load member details."
+            );
         } finally {
             setLoading(false);
         }
@@ -70,52 +81,94 @@ export default function MemberShow({ memberId }) {
         fetchMember();
     }, [fetchMember]);
 
+    // Renew modal state
+    const [renewOpen, setRenewOpen] = useState(false);
+    const [renewPlanId, setRenewPlanId] = useState("");
+    const [renewAuto, setRenewAuto] = useState(false);
+
+    const openRenew = () => {
+        const defaultPlan =
+            member?.latest_subscription?.plan?.id || initialPlans[0]?.id || "";
+        setRenewPlanId(defaultPlan);
+        setRenewAuto(!!member?.latest_subscription?.auto_renew);
+        setRenewOpen(true);
+    };
+
+    const handleRenew = async () => {
+        setError(null);
+        setSuccess(null);
+        try {
+            await http.post(`/web/api/admin/members/${memberId}/renew`, {
+                plan_id: renewPlanId,
+                auto_renew: renewAuto ? 1 : 0,
+            });
+            setSuccess("Subscription renewed successfully.");
+            setRenewOpen(false);
+            fetchMember();
+        } catch (err) {
+            setError(
+                err.response?.data?.message ?? "Failed to renew subscription."
+            );
+        }
+    };
+
     const subscriptionColumns = useMemo(
         () => [
             {
-                accessorKey: 'plan.name',
-                header: 'Plan',
+                accessorKey: "plan.name",
+                header: "Plan",
                 cell: ({ row }) => (
                     <div className="font-medium text-gray-900 dark:text-gray-100">
-                        {row.original.plan?.name || '—'}
+                        {row.original.plan?.name || "—"}
                     </div>
                 ),
             },
             {
-                accessorKey: 'status',
-                header: 'Status',
+                accessorKey: "status",
+                header: "Status",
                 cell: ({ row }) => {
-                    const statusVariant = {
-                        active: 'success',
-                        expired: 'danger',
-                        cancelled: 'warning',
-                        pending: 'info',
-                    }[row.original.status] || 'default';
+                    const statusVariant =
+                        {
+                            active: "success",
+                            expired: "danger",
+                            cancelled: "warning",
+                            pending: "info",
+                        }[row.original.status] || "default";
 
                     return (
-                        <Badge variant={statusVariant}>{row.original.status}</Badge>
+                        <Badge variant={statusVariant}>
+                            {row.original.status}
+                        </Badge>
                     );
                 },
             },
             {
-                accessorKey: 'starts_at',
-                header: 'Start Date',
+                accessorKey: "starts_at",
+                header: "Start Date",
                 cell: ({ row }) => formatDate(row.original.starts_at),
             },
             {
-                accessorKey: 'ends_at',
-                header: 'End Date',
+                accessorKey: "ends_at",
+                header: "End Date",
                 cell: ({ row }) => formatDate(row.original.ends_at),
             },
             {
-                accessorKey: 'auto_renew',
-                header: 'Auto Renew',
+                accessorKey: "auto_renew",
+                header: "Auto Renew",
                 cell: ({ row }) => (
                     <span>
                         {row.original.auto_renew ? (
-                            <Icon icon="heroicons:check-circle" width="20" className="text-emerald-600" />
+                            <Icon
+                                icon="heroicons:check-circle"
+                                width="20"
+                                className="text-emerald-600"
+                            />
                         ) : (
-                            <Icon icon="heroicons:x-circle" width="20" className="text-gray-400" />
+                            <Icon
+                                icon="heroicons:x-circle"
+                                width="20"
+                                className="text-gray-400"
+                            />
                         )}
                     </span>
                 ),
@@ -127,28 +180,33 @@ export default function MemberShow({ memberId }) {
     const attendanceColumns = useMemo(
         () => [
             {
-                accessorKey: 'checked_in_at',
-                header: 'Check-in',
+                accessorKey: "checked_in_at",
+                header: "Check-in",
                 cell: ({ row }) => formatDateTime(row.original.checked_in_at),
             },
             {
-                accessorKey: 'checked_out_at',
-                header: 'Check-out',
+                accessorKey: "checked_out_at",
+                header: "Check-out",
                 cell: ({ row }) => formatDateTime(row.original.checked_out_at),
             },
             {
-                accessorKey: 'source',
-                header: 'Source',
+                accessorKey: "source",
+                header: "Source",
                 cell: ({ row }) => {
                     const sourceIcons = {
-                        qr: 'heroicons:qr-code',
-                        manual: 'heroicons:hand-raised',
-                        device: 'heroicons:device-phone-mobile',
+                        qr: "heroicons:qr-code",
+                        manual: "heroicons:hand-raised",
+                        device: "heroicons:device-phone-mobile",
                     };
                     return (
                         <div className="flex items-center gap-2">
-                            <Icon icon={sourceIcons[row.original.source]} width="16" />
-                            <span className="capitalize">{row.original.source}</span>
+                            <Icon
+                                icon={sourceIcons[row.original.source]}
+                                width="16"
+                            />
+                            <span className="capitalize">
+                                {row.original.source}
+                            </span>
                         </div>
                     );
                 },
@@ -160,8 +218,8 @@ export default function MemberShow({ memberId }) {
     const invoiceColumns = useMemo(
         () => [
             {
-                accessorKey: 'number',
-                header: 'Invoice #',
+                accessorKey: "number",
+                header: "Invoice #",
                 cell: ({ row }) => (
                     <div className="font-mono font-medium text-gray-900 dark:text-gray-100">
                         {row.original.number}
@@ -169,34 +227,37 @@ export default function MemberShow({ memberId }) {
                 ),
             },
             {
-                accessorKey: 'status',
-                header: 'Status',
+                accessorKey: "status",
+                header: "Status",
                 cell: ({ row }) => {
-                    const statusVariant = {
-                        paid: 'success',
-                        issued: 'info',
-                        void: 'danger',
-                        draft: 'default',
-                    }[row.original.status] || 'default';
+                    const statusVariant =
+                        {
+                            paid: "success",
+                            issued: "info",
+                            void: "danger",
+                            draft: "default",
+                        }[row.original.status] || "default";
 
                     return (
-                        <Badge variant={statusVariant}>{row.original.status}</Badge>
+                        <Badge variant={statusVariant}>
+                            {row.original.status}
+                        </Badge>
                     );
                 },
             },
             {
-                accessorKey: 'issued_at',
-                header: 'Issued',
+                accessorKey: "issued_at",
+                header: "Issued",
                 cell: ({ row }) => formatDate(row.original.issued_at),
             },
             {
-                accessorKey: 'due_at',
-                header: 'Due',
+                accessorKey: "due_at",
+                header: "Due",
                 cell: ({ row }) => formatDate(row.original.due_at),
             },
             {
-                accessorKey: 'total_cents',
-                header: 'Total',
+                accessorKey: "total_cents",
+                header: "Total",
                 cell: ({ row }) => (
                     <div className="text-right font-medium">
                         {formatCurrency(row.original.total_cents)}
@@ -210,34 +271,39 @@ export default function MemberShow({ memberId }) {
     const paymentColumns = useMemo(
         () => [
             {
-                accessorKey: 'paid_at',
-                header: 'Date',
+                accessorKey: "paid_at",
+                header: "Date",
                 cell: ({ row }) => formatDateTime(row.original.paid_at),
             },
             {
-                accessorKey: 'method',
-                header: 'Method',
-                cell: ({ row }) => <span className="capitalize">{row.original.method}</span>,
+                accessorKey: "method",
+                header: "Method",
+                cell: ({ row }) => (
+                    <span className="capitalize">{row.original.method}</span>
+                ),
             },
             {
-                accessorKey: 'status',
-                header: 'Status',
+                accessorKey: "status",
+                header: "Status",
                 cell: ({ row }) => {
-                    const statusVariant = {
-                        succeeded: 'success',
-                        pending: 'warning',
-                        failed: 'danger',
-                        refunded: 'info',
-                    }[row.original.status] || 'default';
+                    const statusVariant =
+                        {
+                            succeeded: "success",
+                            pending: "warning",
+                            failed: "danger",
+                            refunded: "info",
+                        }[row.original.status] || "default";
 
                     return (
-                        <Badge variant={statusVariant}>{row.original.status}</Badge>
+                        <Badge variant={statusVariant}>
+                            {row.original.status}
+                        </Badge>
                     );
                 },
             },
             {
-                accessorKey: 'amount_cents',
-                header: 'Amount',
+                accessorKey: "amount_cents",
+                header: "Amount",
                 cell: ({ row }) => (
                     <div className="text-right font-medium">
                         {formatCurrency(row.original.amount_cents)}
@@ -250,10 +316,16 @@ export default function MemberShow({ memberId }) {
 
     if (loading) {
         return (
-            <AuthenticatedLayout header={<h2 className="text-xl font-semibold">Loading...</h2>}>
+            <AuthenticatedLayout
+                header={<h2 className="text-xl font-semibold">Loading...</h2>}
+            >
                 <Head title="Loading..." />
                 <div className="flex h-96 items-center justify-center">
-                    <Icon icon="svg-spinners:ring-resize" width="48" className="text-indigo-600" />
+                    <Icon
+                        icon="svg-spinners:ring-resize"
+                        width="48"
+                        className="text-indigo-600"
+                    />
                 </div>
             </AuthenticatedLayout>
         );
@@ -261,11 +333,13 @@ export default function MemberShow({ memberId }) {
 
     if (error || !member) {
         return (
-            <AuthenticatedLayout header={<h2 className="text-xl font-semibold">Error</h2>}>
+            <AuthenticatedLayout
+                header={<h2 className="text-xl font-semibold">Error</h2>}
+            >
                 <Head title="Error" />
                 <div className="p-8">
                     <div className="rounded-lg border border-rose-200 bg-rose-50 p-6 text-rose-700 dark:border-rose-900/50 dark:bg-rose-900/20 dark:text-rose-300">
-                        {error || 'Member not found'}
+                        {error || "Member not found"}
                     </div>
                 </div>
             </AuthenticatedLayout>
@@ -278,7 +352,7 @@ export default function MemberShow({ memberId }) {
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-center gap-4">
                         <button
-                            onClick={() => router.visit(route('members.index'))}
+                            onClick={() => router.visit(route("members.index"))}
                             className="text-gray-600 transition hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
                         >
                             <Icon icon="heroicons:arrow-left" width="24" />
@@ -294,11 +368,34 @@ export default function MemberShow({ memberId }) {
                     </div>
                     <div className="flex gap-3">
                         <SecondaryButton onClick={fetchMember}>
-                            <Icon icon="heroicons:arrow-path" width="16" className="mr-2" />
+                            <Icon
+                                icon="heroicons:arrow-path"
+                                width="16"
+                                className="mr-2"
+                            />
                             Refresh
                         </SecondaryButton>
-                        <PrimaryButton onClick={() => router.visit(route('members.index'))}>
-                            <Icon icon="heroicons:pencil" width="16" className="mr-2" />
+                        <SecondaryButton
+                            onClick={openRenew}
+                            disabled={
+                                !initialPlans || initialPlans.length === 0
+                            }
+                        >
+                            <Icon
+                                icon="heroicons:arrow-path-rounded-square"
+                                width="16"
+                                className="mr-2"
+                            />
+                            Renew
+                        </SecondaryButton>
+                        <PrimaryButton
+                            onClick={() => router.visit(route("members.index"))}
+                        >
+                            <Icon
+                                icon="heroicons:pencil"
+                                width="16"
+                                className="mr-2"
+                            />
                             Edit Member
                         </PrimaryButton>
                     </div>
@@ -308,6 +405,36 @@ export default function MemberShow({ memberId }) {
             <Head title={member.full_name} />
 
             <div className="space-y-6 p-4 sm:p-6 lg:p-8">
+                {(error || success) && (
+                    <div
+                        className={`flex items-center gap-3 rounded-lg border px-4 py-3 ${
+                            error
+                                ? "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900/50 dark:bg-rose-900/20 dark:text-rose-300"
+                                : "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-900/20 dark:text-emerald-300"
+                        }`}
+                    >
+                        <Icon
+                            icon={
+                                error
+                                    ? "heroicons:exclamation-circle"
+                                    : "heroicons:check-circle"
+                            }
+                            width="20"
+                        />
+                        <span className="text-sm font-medium">
+                            {error ?? success}
+                        </span>
+                        <button
+                            onClick={() => {
+                                setError(null);
+                                setSuccess(null);
+                            }}
+                            className="ml-auto rounded-md p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800"
+                        >
+                            <Icon icon="heroicons:x-mark" width="16" />
+                        </button>
+                    </div>
+                )}
                 {/* Member Header Card */}
                 <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
                     <div className="flex flex-col gap-6 md:flex-row">
@@ -333,7 +460,10 @@ export default function MemberShow({ memberId }) {
                                     <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
                                         Status
                                     </p>
-                                    <Badge variant={member.status} className="mt-1">
+                                    <Badge
+                                        variant={member.status}
+                                        className="mt-1"
+                                    >
                                         {member.status_label}
                                     </Badge>
                                 </div>
@@ -342,7 +472,7 @@ export default function MemberShow({ memberId }) {
                                         Branch
                                     </p>
                                     <p className="mt-1 text-sm font-medium text-gray-900 dark:text-gray-100">
-                                        {member.branch?.name || '—'}
+                                        {member.branch?.name || "—"}
                                     </p>
                                 </div>
                                 <div>
@@ -352,11 +482,13 @@ export default function MemberShow({ memberId }) {
                                     <p
                                         className={`mt-1 text-sm font-semibold ${
                                             member.balance_due_cents > 0
-                                                ? 'text-rose-600 dark:text-rose-400'
-                                                : 'text-gray-900 dark:text-gray-100'
+                                                ? "text-rose-600 dark:text-rose-400"
+                                                : "text-gray-900 dark:text-gray-100"
                                         }`}
                                     >
-                                        {formatCurrency(member.balance_due_cents)}
+                                        {formatCurrency(
+                                            member.balance_due_cents
+                                        )}
                                     </p>
                                 </div>
                                 <div>
@@ -377,13 +509,19 @@ export default function MemberShow({ memberId }) {
                                     <div className="mt-1 space-y-1">
                                         {member.email && (
                                             <div className="flex items-center gap-2 text-sm text-gray-900 dark:text-gray-100">
-                                                <Icon icon="heroicons:envelope" width="16" />
+                                                <Icon
+                                                    icon="heroicons:envelope"
+                                                    width="16"
+                                                />
                                                 {member.email}
                                             </div>
                                         )}
                                         {member.phone && (
                                             <div className="flex items-center gap-2 text-sm text-gray-900 dark:text-gray-100">
-                                                <Icon icon="heroicons:phone" width="16" />
+                                                <Icon
+                                                    icon="heroicons:phone"
+                                                    width="16"
+                                                />
                                                 {member.phone}
                                             </div>
                                         )}
@@ -399,8 +537,12 @@ export default function MemberShow({ memberId }) {
                                                 {member.emergency_contact.name}
                                             </p>
                                             <p className="text-sm text-gray-600 dark:text-gray-300">
-                                                {member.emergency_contact.phone} •{' '}
-                                                {member.emergency_contact.relationship}
+                                                {member.emergency_contact.phone}{" "}
+                                                •{" "}
+                                                {
+                                                    member.emergency_contact
+                                                        .relationship
+                                                }
                                             </p>
                                         </div>
                                     ) : (
@@ -417,15 +559,18 @@ export default function MemberShow({ memberId }) {
                 {/* Tabs */}
                 <div className="rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
                     <div className="border-b border-gray-200 dark:border-gray-800">
-                        <nav className="-mb-px flex space-x-8 px-6" aria-label="Tabs">
+                        <nav
+                            className="-mb-px flex space-x-8 px-6"
+                            aria-label="Tabs"
+                        >
                             {TABS.map((tab) => (
                                 <button
                                     key={tab.id}
                                     onClick={() => setActiveTab(tab.id)}
                                     className={`flex items-center gap-2 whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium transition ${
                                         activeTab === tab.id
-                                            ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400'
-                                            : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:border-gray-700 dark:hover:text-gray-300'
+                                            ? "border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400"
+                                            : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:border-gray-700 dark:hover:text-gray-300"
                                     }`}
                                 >
                                     <Icon icon={tab.icon} width="18" />
@@ -436,7 +581,7 @@ export default function MemberShow({ memberId }) {
                     </div>
 
                     <div className="p-6">
-                        {activeTab === 'overview' && (
+                        {activeTab === "overview" && (
                             <div className="space-y-6">
                                 <div className="grid gap-6 md:grid-cols-3">
                                     <div className="rounded-lg border border-gray-200 p-4 dark:border-gray-800">
@@ -460,7 +605,8 @@ export default function MemberShow({ memberId }) {
                                             Monthly Attendance
                                         </p>
                                         <p className="mt-2 text-2xl font-semibold text-gray-900 dark:text-gray-100">
-                                            {member.attendance_count || 0} visits
+                                            {member.attendance_count || 0}{" "}
+                                            visits
                                         </p>
                                     </div>
                                 </div>
@@ -476,15 +622,27 @@ export default function MemberShow({ memberId }) {
                                                     Plan
                                                 </p>
                                                 <p className="mt-1 font-medium text-gray-900 dark:text-gray-100">
-                                                    {member.latest_subscription.plan?.name || '—'}
+                                                    {member.latest_subscription
+                                                        .plan?.name || "—"}
                                                 </p>
                                             </div>
                                             <div>
                                                 <p className="text-sm text-gray-500 dark:text-gray-400">
                                                     Status
                                                 </p>
-                                                <Badge variant={member.latest_subscription.status} className="mt-1">
-                                                    {member.latest_subscription.status}
+                                                <Badge
+                                                    variant={
+                                                        member
+                                                            .latest_subscription
+                                                            .status
+                                                    }
+                                                    className="mt-1"
+                                                >
+                                                    {
+                                                        member
+                                                            .latest_subscription
+                                                            .status
+                                                    }
                                                 </Badge>
                                             </div>
                                             <div>
@@ -492,7 +650,11 @@ export default function MemberShow({ memberId }) {
                                                     Valid From
                                                 </p>
                                                 <p className="mt-1 text-sm font-medium text-gray-900 dark:text-gray-100">
-                                                    {formatDate(member.latest_subscription.starts_at)}
+                                                    {formatDate(
+                                                        member
+                                                            .latest_subscription
+                                                            .starts_at
+                                                    )}
                                                 </p>
                                             </div>
                                             <div>
@@ -500,7 +662,11 @@ export default function MemberShow({ memberId }) {
                                                     Valid Until
                                                 </p>
                                                 <p className="mt-1 text-sm font-medium text-gray-900 dark:text-gray-100">
-                                                    {formatDate(member.latest_subscription.ends_at)}
+                                                    {formatDate(
+                                                        member
+                                                            .latest_subscription
+                                                            .ends_at
+                                                    )}
                                                 </p>
                                             </div>
                                         </div>
@@ -509,7 +675,7 @@ export default function MemberShow({ memberId }) {
                             </div>
                         )}
 
-                        {activeTab === 'subscriptions' && (
+                        {activeTab === "subscriptions" && (
                             <DataTable
                                 data={member.subscriptions || []}
                                 columns={subscriptionColumns}
@@ -519,7 +685,7 @@ export default function MemberShow({ memberId }) {
                             />
                         )}
 
-                        {activeTab === 'attendance' && (
+                        {activeTab === "attendance" && (
                             <DataTable
                                 data={member.attendance_logs || []}
                                 columns={attendanceColumns}
@@ -529,7 +695,7 @@ export default function MemberShow({ memberId }) {
                             />
                         )}
 
-                        {activeTab === 'billing' && (
+                        {activeTab === "billing" && (
                             <div className="space-y-6">
                                 <div>
                                     <h3 className="mb-4 font-medium text-gray-900 dark:text-gray-100">
@@ -558,7 +724,7 @@ export default function MemberShow({ memberId }) {
                             </div>
                         )}
 
-                        {activeTab === 'notes' && (
+                        {activeTab === "notes" && (
                             <div className="text-center py-12">
                                 <Icon
                                     icon="heroicons:document-text"
@@ -573,6 +739,110 @@ export default function MemberShow({ memberId }) {
                     </div>
                 </div>
             </div>
+            {/* Renew Dialog */}
+            <Transition appear show={renewOpen} as={Fragment}>
+                <Dialog
+                    as="div"
+                    className="relative z-50"
+                    onClose={() => setRenewOpen(false)}
+                >
+                    <Transition.Child
+                        as={Fragment}
+                        enter="ease-out duration-300"
+                        enterFrom="opacity-0"
+                        enterTo="opacity-100"
+                        leave="ease-in duration-200"
+                        leaveFrom="opacity-100"
+                        leaveTo="opacity-0"
+                    >
+                        <div className="fixed inset-0 bg-black/25 backdrop-blur-sm" />
+                    </Transition.Child>
+
+                    <div className="fixed inset-0 overflow-y-auto">
+                        <div className="flex min-h-full items-center justify-center p-4">
+                            <Transition.Child
+                                as={Fragment}
+                                enter="ease-out duration-300"
+                                enterFrom="opacity-0 scale-95"
+                                enterTo="opacity-100 scale-100"
+                                leave="ease-in duration-200"
+                                leaveFrom="opacity-100 scale-100"
+                                leaveTo="opacity-0 scale-95"
+                            >
+                                <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 shadow-xl transition-all dark:bg-gray-900">
+                                    <div className="flex items-center justify-between border-b border-gray-200 pb-3 dark:border-gray-800">
+                                        <Dialog.Title className="text-base font-semibold text-gray-900 dark:text-gray-100">
+                                            Renew Subscription
+                                        </Dialog.Title>
+                                        <button
+                                            onClick={() => setRenewOpen(false)}
+                                            className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800"
+                                        >
+                                            <Icon
+                                                icon="heroicons:x-mark"
+                                                width="20"
+                                            />
+                                        </button>
+                                    </div>
+                                    <div className="mt-4 space-y-4">
+                                        <div>
+                                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                Plan
+                                            </label>
+                                            <select
+                                                className="mt-1 block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                                                value={renewPlanId}
+                                                onChange={(e) =>
+                                                    setRenewPlanId(
+                                                        e.target.value
+                                                    )
+                                                }
+                                            >
+                                                {initialPlans.map((p) => (
+                                                    <option
+                                                        key={p.id}
+                                                        value={p.id}
+                                                    >
+                                                        {p.name}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <label className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                                            <input
+                                                type="checkbox"
+                                                className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-700"
+                                                checked={renewAuto}
+                                                onChange={(e) =>
+                                                    setRenewAuto(
+                                                        e.target.checked
+                                                    )
+                                                }
+                                            />
+                                            Auto renew
+                                        </label>
+                                    </div>
+                                    <div className="mt-6 flex justify-end gap-3 border-t border-gray-200 pt-4 dark:border-gray-800">
+                                        <SecondaryButton
+                                            type="button"
+                                            onClick={() => setRenewOpen(false)}
+                                        >
+                                            Cancel
+                                        </SecondaryButton>
+                                        <PrimaryButton
+                                            type="button"
+                                            onClick={handleRenew}
+                                            disabled={!renewPlanId}
+                                        >
+                                            Confirm
+                                        </PrimaryButton>
+                                    </div>
+                                </Dialog.Panel>
+                            </Transition.Child>
+                        </div>
+                    </div>
+                </Dialog>
+            </Transition>
         </AuthenticatedLayout>
     );
 }
